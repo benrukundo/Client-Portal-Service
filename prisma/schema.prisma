@@ -1,0 +1,363 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  avatar        String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+
+  workspaceMemberships WorkspaceMember[]
+  clientContacts       ClientContact[]
+  projectUpdates       ProjectUpdate[]
+  files                File[]
+  requestedApprovals   ApprovalRequest[] @relation("RequestedApprovals")
+  respondedApprovals   ApprovalRequest[] @relation("RespondedApprovals")
+  messages             Message[]
+  activityLogs         ActivityLog[]
+
+  @@index([email])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============================================
+// WORKSPACE (AGENCY)
+// ============================================
+
+model Workspace {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  logo        String?
+  brandColor  String   @default("#0066FF")
+  website     String?
+  address     String?
+  phone       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+  plan                   String    @default("trial")
+  trialEndsAt            DateTime?
+
+  storageUsed Int @default(0)
+
+  members      WorkspaceMember[]
+  clients      Client[]
+  activityLogs ActivityLog[]
+
+  @@index([slug])
+  @@index([stripeCustomerId])
+}
+
+model WorkspaceMember {
+  id        String   @id @default(cuid())
+  role      String   @default("member")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
+  @@index([userId])
+}
+
+// ============================================
+// CLIENT
+// ============================================
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  contacts ClientContact[]
+  projects Project[]
+  invoices Invoice[]
+
+  @@index([workspaceId])
+}
+
+model ClientContact {
+  id        String   @id @default(cuid())
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clientId])
+  @@index([clientId])
+  @@index([userId])
+}
+
+// ============================================
+// PROJECT
+// ============================================
+
+model Project {
+  id          String    @id @default(cuid())
+  name        String
+  description String?   @db.Text
+  status      String    @default("active")
+  startDate   DateTime?
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  updates   ProjectUpdate[]
+  files     File[]
+  approvals ApprovalRequest[]
+  messages  Message[]
+
+  @@index([clientId])
+  @@index([status])
+}
+
+model ProjectUpdate {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User    @relation(fields: [authorId], references: [id])
+
+  attachments File[]
+
+  @@index([projectId])
+  @@index([createdAt])
+}
+
+// ============================================
+// FILES
+// ============================================
+
+model File {
+  id        String   @id @default(cuid())
+  name      String
+  size      Int
+  type      String
+  key       String
+  url       String
+  createdAt DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  uploadedById String
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id])
+
+  updateId String?
+  update   ProjectUpdate? @relation(fields: [updateId], references: [id], onDelete: SetNull)
+
+  approvalRequestId String?
+  approvalRequest   ApprovalRequest? @relation(fields: [approvalRequestId], references: [id], onDelete: SetNull)
+
+  folder String?
+
+  @@index([projectId])
+  @@index([updateId])
+  @@index([approvalRequestId])
+}
+
+// ============================================
+// APPROVALS
+// ============================================
+
+model ApprovalRequest {
+  id           String    @id @default(cuid())
+  title        String
+  description  String?   @db.Text
+  status       String    @default("pending")
+  responseNote String?   @db.Text
+  respondedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  requestedById String
+  requestedBy   User   @relation("RequestedApprovals", fields: [requestedById], references: [id])
+
+  respondedById String?
+  respondedBy   User?   @relation("RespondedApprovals", fields: [respondedById], references: [id])
+
+  files File[]
+
+  @@index([projectId])
+  @@index([status])
+}
+
+// ============================================
+// MESSAGES
+// ============================================
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  readBy MessageRead[]
+
+  @@index([projectId])
+  @@index([createdAt])
+}
+
+model MessageRead {
+  id     String   @id @default(cuid())
+  readAt DateTime @default(now())
+
+  messageId String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  userId String
+
+  @@unique([messageId, userId])
+  @@index([userId])
+}
+
+// ============================================
+// INVOICES
+// ============================================
+
+model Invoice {
+  id        String    @id @default(cuid())
+  number    String
+  status    String    @default("draft")
+  currency  String    @default("usd")
+  subtotal  Int
+  tax       Int       @default(0)
+  total     Int
+  dueDate   DateTime?
+  sentAt    DateTime?
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  stripePaymentIntentId String?
+  stripeInvoiceUrl      String?
+
+  items InvoiceItem[]
+
+  @@index([clientId])
+  @@index([status])
+}
+
+model InvoiceItem {
+  id          String @id @default(cuid())
+  description String
+  quantity    Int    @default(1)
+  unitPrice   Int
+
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+// ============================================
+// ACTIVITY LOG
+// ============================================
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  @@index([workspaceId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
