@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { FolderOpen, FileText, CheckCircle, Receipt } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -156,6 +157,16 @@ export default async function PortalPage({ params }: PortalPageProps) {
             <div className="text-2xl font-bold">{client.invoices.length}</div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Quick Links */}
+      <div className="flex gap-4">
+        <Link href={`/portal/${workspaceSlug}/invoices`}>
+          <Button variant="outline">
+            <Receipt className="mr-2 h-4 w-4" />
+            View All Invoices ({client.invoices.length})
+          </Button>
+        </Link>
       </div>
 
       {/* Projects List */}
