@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Activity,
   BarChart3,
+  Search,
 } from 'lucide-react'
 
 interface DashboardSidebarProps {

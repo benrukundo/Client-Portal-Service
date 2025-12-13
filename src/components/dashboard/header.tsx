@@ -15,6 +15,7 @@ import {
 import { getInitials } from '@/lib/utils'
 import { Bell, LogOut, Settings, User } from 'lucide-react'
 import Link from 'next/link'
+import { SearchCommand } from './search-command'
 
 interface DashboardHeaderProps {
   user: {
@@ -29,8 +30,8 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ user, workspace }: DashboardHeaderProps) {
   return (
     <header className="h-16 border-b bg-card flex items-center justify-between px-6">
-      <div>
-        <h1 className="text-lg font-semibold">Welcome back!</h1>
+      <div className="flex items-center gap-4 flex-1">
+        <SearchCommand />
       </div>
 
       <div className="flex items-center gap-4">
