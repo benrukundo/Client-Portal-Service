@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { MessageThread } from '@/components/shared/message-thread'
 import { ProjectFilesTab } from '@/components/dashboard/project-files-tab'
+import { DeleteProjectButton } from '@/components/dashboard/delete-project-button'
+import { ProjectActivityTab } from '@/components/dashboard/project-activity-tab'
 import {
   ArrowLeft,
   Plus,
@@ -146,18 +148,14 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             )}
           </div>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>Edit Project</DropdownMenuItem>
-            <DropdownMenuItem>Change Status</DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600">Delete Project</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href={`/dashboard/projects/${project.id}/edit`}>
+              Edit Project
+            </Link>
+          </Button>
+          <DeleteProjectButton projectId={project.id} projectName={project.name} />
+        </div>
       </div>
 
       {/* Tabs */}
@@ -178,6 +176,9 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
           <TabsTrigger value="messages" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
             Messages ({project.messages.length})
+          </TabsTrigger>
+          <TabsTrigger value="activity" className="flex items-center gap-2">
+            Activity
           </TabsTrigger>
         </TabsList>
 
@@ -331,6 +332,18 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
               },
             }))}
           />
+        </TabsContent>
+
+        {/* Activity Tab */}
+        <TabsContent value="activity">
+          <Card>
+            <CardHeader>
+              <CardTitle>Project Activity</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProjectActivityTab projectId={project.id} />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
