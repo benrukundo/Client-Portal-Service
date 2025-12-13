@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { MessageThread } from '@/components/shared/message-thread'
+import { FileUpload } from '@/components/shared/file-upload'
+import { FilesList } from '@/components/shared/files-list'
 import {
   ArrowLeft,
   Plus,
@@ -257,50 +259,17 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         </TabsContent>
 
         {/* Files Tab */}
-        <TabsContent value="files" className="space-y-4">
-          <div className="flex justify-end">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Upload Files
-            </Button>
-          </div>
-
-          {project.files.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No files yet</h3>
-                <p className="text-muted-foreground text-center mb-4">
-                  Upload files to share with the client.
-                </p>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Upload Files
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {project.files.map((file) => (
-                <Card key={file.id}>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-3">
-                      <FileText className="h-10 w-10 text-muted-foreground" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{file.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {(file.size / 1024).toFixed(1)} KB
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Uploaded {formatRelativeTime(file.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+        <TabsContent value="files" className="space-y-6">
+          <FileUpload
+            projectId={project.id}
+            onUploadComplete={() => {
+              // Trigger refresh of files list
+              window.location.reload()
+            }}
+          />
+          <FilesList
+            projectId={project.id}
+          />
         </TabsContent>
 
         {/* Approvals Tab */}
