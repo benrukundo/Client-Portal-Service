@@ -8,8 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { MessageThread } from '@/components/shared/message-thread'
-import { FileUpload } from '@/components/shared/file-upload'
-import { FilesList } from '@/components/shared/files-list'
+import { ProjectFilesTab } from '@/components/dashboard/project-files-tab'
 import {
   ArrowLeft,
   Plus,
@@ -260,16 +259,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 
         {/* Files Tab */}
         <TabsContent value="files" className="space-y-6">
-          <FileUpload
-            projectId={project.id}
-            onUploadComplete={() => {
-              // Trigger refresh of files list
-              window.location.reload()
-            }}
-          />
-          <FilesList
-            projectId={project.id}
-          />
+          <ProjectFilesTab projectId={project.id} />
         </TabsContent>
 
         {/* Approvals Tab */}
