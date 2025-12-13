@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { logActivity } from '@/lib/activity'
 
 const createClientSchema = z.object({
   name: z.string().min(1).max(100),
@@ -111,13 +112,22 @@ export async function POST(request: Request) {
       return newClient
     })
 
+    // Log activity
+    await logActivity({
+      workspaceId: workspaceMember.workspaceId,
+      userId: session.user.id,
+      action: 'client.created',
+      description: `Created client "${validatedData.name}"`,
+      clientId: client.id,
+    })
+
     return NextResponse.json(client, { status: 201 })
   } catch (error) {
     console.error('Error creating client:', error)
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { message: 'Invalid data', errors: error.errors },
+        { message: 'Invalid data', errors: error.issues },
         { status: 400 }
       )
     }

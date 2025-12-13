@@ -8,10 +8,11 @@ import { useWorkspace } from '@/contexts/workspace-context'
 import {
   LayoutDashboard,
   Users,
-  FolderOpen,
-  Receipt,
+  FolderKanban,
+  FileText,
   Settings,
-  HelpCircle,
+  ExternalLink,
+  Activity,
 } from 'lucide-react'
 
 interface DashboardSidebarProps {
@@ -21,13 +22,13 @@ interface DashboardSidebarProps {
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Clients', href: '/dashboard/clients', icon: Users },
-  { name: 'Projects', href: '/dashboard/projects', icon: FolderOpen },
-  { name: 'Invoices', href: '/dashboard/invoices', icon: Receipt },
+  { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
+  { name: 'Invoices', href: '/dashboard/invoices', icon: FileText },
+  { name: 'Activity', href: '/dashboard/activity', icon: Activity },
 ]
 
 const secondaryNavigation = [
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
-  { name: 'Help', href: '/dashboard/help', icon: HelpCircle },
 ]
 
 export function DashboardSidebar({ workspace: initialWorkspace }: DashboardSidebarProps) {
