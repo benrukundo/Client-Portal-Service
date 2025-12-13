@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { MessageInput } from '@/components/shared/message-input'
 import { 
   ArrowLeft, 
   FileText, 
@@ -346,7 +347,7 @@ export default async function PortalProjectPage({ params }: PortalProjectPagePro
           <Card>
             <CardContent className="pt-6">
               {project.messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8">
+                <div className="flex flex-col items-center justify-center py-8 mb-4">
                   <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No messages yet</h3>
                   <p className="text-muted-foreground text-center">
@@ -354,7 +355,7 @@ export default async function PortalProjectPage({ params }: PortalProjectPagePro
                   </p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
                   {project.messages.map((message) => (
                     <div key={message.id} className="flex items-start gap-3">
                       <Avatar className="h-8 w-8">
@@ -362,7 +363,7 @@ export default async function PortalProjectPage({ params }: PortalProjectPagePro
                           {getInitials(message.author.name || message.author.email)}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
+                      <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium">
                             {message.author.name || message.author.email}
@@ -377,6 +378,7 @@ export default async function PortalProjectPage({ params }: PortalProjectPagePro
                   ))}
                 </div>
               )}
+              <MessageInput projectId={project.id} />
             </CardContent>
           </Card>
         </TabsContent>
