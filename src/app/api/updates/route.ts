@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { sendProjectUpdateNotification } from '@/lib/emails'
 
 const createUpdateSchema = z.object({
   projectId: z.string(),
@@ -33,15 +34,22 @@ export async function POST(request: Request) {
     const body = await request.json()
     const validatedData = createUpdateSchema.parse(body)
 
-    // Verify the project belongs to this workspace
-    const project = await prisma.project.findFirst({
-      where: {
-        id: validatedData.projectId,
-        client: { workspaceId: workspaceMember.workspaceId },
+    // Get project with client information for notifications and verification
+    const project = await prisma.project.findUnique({
+      where: { id: validatedData.projectId },
+      include: {
+        client: {
+          include: {
+            workspace: true,
+            contacts: {
+              include: { user: true },
+            },
+          },
+        },
       },
     })
 
-    if (!project) {
+    if (!project || project.client.workspaceId !== workspaceMember.workspaceId) {
       return NextResponse.json(
         { message: 'Project not found' },
         { status: 404 }
@@ -59,13 +67,29 @@ export async function POST(request: Request) {
       },
     })
 
+    // Send email notifications to all client contacts
+    const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL}/portal/${project.client.workspace.slug}/projects/${validatedData.projectId}`
+
+    for (const contact of project.client.contacts) {
+      if (contact.user.email) {
+        await sendProjectUpdateNotification({
+          clientEmail: contact.user.email,
+          clientName: contact.user.name || '',
+          projectName: project.name,
+          updateContent: validatedData.content.substring(0, 500),
+          portalUrl,
+          workspaceName: project.client.workspace.name,
+        })
+      }
+    }
+
     return NextResponse.json(update, { status: 201 })
   } catch (error) {
     console.error('Error creating update:', error)
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { message: 'Invalid data', errors: error.errors },
+        { message: 'Invalid data', errors: error.issues },
         { status: 400 }
       )
     }

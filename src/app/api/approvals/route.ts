@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { sendApprovalRequestNotification } from '@/lib/emails'
 
 const createApprovalSchema = z.object({
   projectId: z.string(),
@@ -34,15 +35,22 @@ export async function POST(request: Request) {
     const body = await request.json()
     const validatedData = createApprovalSchema.parse(body)
 
-    // Verify the project belongs to this workspace
-    const project = await prisma.project.findFirst({
-      where: {
-        id: validatedData.projectId,
-        client: { workspaceId: workspaceMember.workspaceId },
+    // Get project with client information for notifications and verification
+    const project = await prisma.project.findUnique({
+      where: { id: validatedData.projectId },
+      include: {
+        client: {
+          include: {
+            workspace: true,
+            contacts: {
+              include: { user: true },
+            },
+          },
+        },
       },
     })
 
-    if (!project) {
+    if (!project || project.client.workspaceId !== workspaceMember.workspaceId) {
       return NextResponse.json(
         { message: 'Project not found' },
         { status: 404 }
@@ -62,13 +70,30 @@ export async function POST(request: Request) {
       },
     })
 
+    // Send email notifications to all client contacts
+    const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL}/portal/${project.client.workspace.slug}/projects/${validatedData.projectId}/approvals/${approval.id}`
+
+    for (const contact of project.client.contacts) {
+      if (contact.user.email) {
+        await sendApprovalRequestNotification({
+          clientEmail: contact.user.email,
+          clientName: contact.user.name || '',
+          projectName: project.name,
+          approvalTitle: validatedData.title,
+          approvalDescription: validatedData.description,
+          portalUrl,
+          workspaceName: project.client.workspace.name,
+        })
+      }
+    }
+
     return NextResponse.json(approval, { status: 201 })
   } catch (error) {
     console.error('Error creating approval:', error)
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { message: 'Invalid data', errors: error.errors },
+        { message: 'Invalid data', errors: error.issues },
         { status: 400 }
       )
     }
