@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { MessageInput } from '@/components/shared/message-input'
+import { MessageThread } from '@/components/shared/message-thread'
 import { 
   ArrowLeft, 
   FileText, 
@@ -344,43 +344,20 @@ export default async function PortalProjectPage({ params }: PortalProjectPagePro
 
         {/* Messages Tab */}
         <TabsContent value="messages" className="space-y-4">
-          <Card>
-            <CardContent className="pt-6">
-              {project.messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 mb-4">
-                  <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No messages yet</h3>
-                  <p className="text-muted-foreground text-center">
-                    Start a conversation about this project.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
-                  {project.messages.map((message) => (
-                    <div key={message.id} className="flex items-start gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="text-xs">
-                          {getInitials(message.author.name || message.author.email)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium">
-                            {message.author.name || message.author.email}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatRelativeTime(message.createdAt)}
-                          </p>
-                        </div>
-                        <p className="text-sm mt-1">{message.content}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <MessageInput projectId={project.id} />
-            </CardContent>
-          </Card>
+          <MessageThread
+            projectId={project.id}
+            initialMessages={project.messages.map(m => ({
+              id: m.id,
+              content: m.content,
+              createdAt: m.createdAt.toISOString(),
+              author: {
+                id: m.author.id,
+                name: m.author.name,
+                email: m.author.email,
+                avatar: m.author.avatar,
+              },
+            }))}
+          />
         </TabsContent>
       </Tabs>
     </div>
