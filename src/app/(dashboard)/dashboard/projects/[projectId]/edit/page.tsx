@@ -17,6 +17,7 @@ import {
 import { toast } from 'sonner'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { PROJECT_STATUSES } from '@/lib/constants'
 
 export default function EditProjectPage() {
   const router = useRouter()
@@ -158,11 +159,11 @@ export default function EditProjectPage() {
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="not-started">Not Started</SelectItem>
-                  <SelectItem value="in-progress">In Progress</SelectItem>
-                  <SelectItem value="review">In Review</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="on-hold">On Hold</SelectItem>
+                  {PROJECT_STATUSES.map((status) => (
+                    <SelectItem key={status.value} value={status.value}>
+                      {status.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

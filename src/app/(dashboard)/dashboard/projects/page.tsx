@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { FolderOpen, Calendar, Clock } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { getStatusColor, getStatusLabel } from '@/lib/constants'
 
 export default async function ProjectsPage() {
   const session = await auth()
@@ -36,20 +37,7 @@ export default async function ProjectsPage() {
     orderBy: { createdAt: 'desc' },
   })
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-700'
-      case 'completed':
-        return 'bg-blue-100 text-blue-700'
-      case 'on-hold':
-        return 'bg-yellow-100 text-yellow-700'
-      case 'cancelled':
-        return 'bg-red-100 text-red-700'
-      default:
-        return 'bg-gray-100 text-gray-700'
-    }
-  }
+
 
   return (
     <div className="space-y-6">
@@ -85,7 +73,7 @@ export default async function ProjectsPage() {
                     <div className="flex items-center gap-3">
                       <h3 className="font-medium">{project.name}</h3>
                       <Badge className={getStatusColor(project.status)}>
-                        {project.status}
+                        {getStatusLabel(project.status)}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">

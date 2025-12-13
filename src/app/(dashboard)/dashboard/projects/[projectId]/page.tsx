@@ -22,6 +22,7 @@ import {
   MoreHorizontal
 } from 'lucide-react'
 import { getInitials, formatDate, formatRelativeTime } from '@/lib/utils'
+import { getStatusColor, getStatusLabel } from '@/lib/constants'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -82,21 +83,6 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     notFound()
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-700'
-      case 'completed':
-        return 'bg-blue-100 text-blue-700'
-      case 'on-hold':
-        return 'bg-yellow-100 text-yellow-700'
-      case 'cancelled':
-        return 'bg-red-100 text-red-700'
-      default:
-        return 'bg-gray-100 text-gray-700'
-    }
-  }
-
   const getApprovalStatusColor = (status: string) => {
     switch (status) {
       case 'approved':
@@ -104,9 +90,9 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-700'
       case 'changes-requested':
-        return 'bg-orange-100 text-orange-700'
+        return 'bg-orange-100 text-orange-800'
       case 'rejected':
-        return 'bg-red-100 text-red-700'
+        return 'bg-red-100 text-red-800'
       default:
         return 'bg-gray-100 text-gray-700'
     }
@@ -127,7 +113,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">{project.name}</h1>
             <Badge className={getStatusColor(project.status)}>
-              {project.status}
+              {getStatusLabel(project.status)}
             </Badge>
           </div>
           {project.description && (
