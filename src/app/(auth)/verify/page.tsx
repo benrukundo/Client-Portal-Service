@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import NextImage from 'next/image'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Mail } from 'lucide-react'
@@ -7,6 +8,16 @@ export default function VerifyPage() {
   return (
     <Card className="text-center">
       <CardHeader>
+        <Link href="/" className="inline-block mb-4">
+          <NextImage
+            src="/portivo.svg"
+            alt="Portivo"
+            width={140}
+            height={40}
+            style={{ width: '140px', height: 'auto' }}
+            className="mx-auto"
+          />
+        </Link>
         <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
           <Mail className="h-6 w-6 text-primary" />
         </div>

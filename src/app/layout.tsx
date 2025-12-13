@@ -6,7 +6,7 @@ import { Providers } from '@/components/shared/providers'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'ClientHub - Client Portal for Service Businesses',
+  title: 'Portivo - Client Portal for Service Businesses',
   description: 'A white-labeled client portal for agencies to manage clients, projects, and invoices.',
 }
 
@@ -17,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>

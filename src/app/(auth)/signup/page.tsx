@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import NextImage from 'next/image'
 import { signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -47,8 +48,15 @@ export default function SignupPage() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <Link href="/" className="text-2xl font-bold text-primary mb-2 inline-block">
-          ClientHub
+        <Link href="/" className="inline-block mb-4">
+          <NextImage
+            src="/portivo.svg"
+            alt="Portivo"
+            width={140}
+            height={40}
+            style={{ width: '140px', height: 'auto' }}
+            className="mx-auto"
+          />
         </Link>
         <CardTitle>Create your account</CardTitle>
         <CardDescription>
