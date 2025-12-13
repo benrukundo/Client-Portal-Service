@@ -13,6 +13,7 @@ import {
   Settings,
   ExternalLink,
   Activity,
+  BarChart3,
 } from 'lucide-react'
 
 interface DashboardSidebarProps {
@@ -24,6 +25,7 @@ const navigation = [
   { name: 'Clients', href: '/dashboard/clients', icon: Users },
   { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
   { name: 'Invoices', href: '/dashboard/invoices', icon: FileText },
+  { name: 'Reports', href: '/dashboard/reports', icon: BarChart3 },
   { name: 'Activity', href: '/dashboard/activity', icon: Activity },
 ]
 
@@ -52,7 +54,7 @@ export function DashboardSidebar({ workspace: initialWorkspace }: DashboardSideb
           ) : (
             <div
               className="h-8 w-8 rounded flex items-center justify-center text-white font-bold text-sm"
-              style={{ backgroundColor: currentWorkspace.brandColor }}
+              style={{ backgroundColor: currentWorkspace.brandColor || '#0066FF' }}
             >
               {currentWorkspace.name.charAt(0).toUpperCase()}
             </div>
