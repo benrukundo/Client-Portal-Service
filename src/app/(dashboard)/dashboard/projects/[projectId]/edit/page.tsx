@@ -40,11 +40,11 @@ export default function EditProjectPage() {
         if (response.ok) {
           const project = await response.json()
           setFormData({
-            name: project.name,
+            name: project.name || '',
             description: project.description || '',
-            status: project.status,
-            startDate: project.startDate ? project.startDate.split('T')[0] : '',
-            dueDate: project.dueDate ? project.dueDate.split('T')[0] : '',
+            status: project.status || 'not-started',
+            startDate: project.startDate ? new Date(project.startDate).toISOString().split('T')[0] : '',
+            dueDate: project.dueDate ? new Date(project.dueDate).toISOString().split('T')[0] : '',
           })
         } else {
           toast.error('Project not found')
@@ -65,16 +65,27 @@ export default function EditProjectPage() {
     setSaving(true)
 
     try {
+      // Only send fields that have values
+      const updateData: Record<string, any> = {
+        name: formData.name,
+        status: formData.status,
+      }
+
+      // Only include optional fields if they have values
+      if (formData.description) {
+        updateData.description = formData.description
+      }
+      if (formData.startDate) {
+        updateData.startDate = formData.startDate
+      }
+      if (formData.dueDate) {
+        updateData.dueDate = formData.dueDate
+      }
+
       const response = await fetch(`/api/projects/${projectId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          description: formData.description || null,
-          status: formData.status,
-          startDate: formData.startDate || null,
-          dueDate: formData.dueDate || null,
-        }),
+        body: JSON.stringify(updateData),
       })
 
       if (!response.ok) {
@@ -84,6 +95,7 @@ export default function EditProjectPage() {
 
       toast.success('Project updated successfully')
       router.push(`/dashboard/projects/${projectId}`)
+      router.refresh()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to update project')
     } finally {

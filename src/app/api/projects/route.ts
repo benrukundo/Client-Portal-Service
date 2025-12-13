@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { logActivity } from '@/lib/activity'
 
 const createProjectSchema = z.object({
   clientId: z.string(),
@@ -119,13 +120,23 @@ export async function POST(request: Request) {
       },
     })
 
+    // Log activity
+    await logActivity({
+      workspaceId: workspaceMember.workspaceId,
+      userId: session.user.id,
+      action: 'project.created',
+      description: `Created project "${validatedData.name}"`,
+      projectId: project.id,
+      clientId: validatedData.clientId,
+    })
+
     return NextResponse.json(project, { status: 201 })
   } catch (error) {
     console.error('Error creating project:', error)
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { message: 'Invalid data', errors: error.errors },
+        { message: 'Invalid data', errors: error.issues },
         { status: 400 }
       )
     }
