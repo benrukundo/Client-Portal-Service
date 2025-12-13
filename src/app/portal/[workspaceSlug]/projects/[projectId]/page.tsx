@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { MessageThread } from '@/components/shared/message-thread'
+import { PortalFilesList } from '@/components/portal/portal-files-list'
 import { 
   ArrowLeft, 
   FileText, 
@@ -234,45 +235,15 @@ export default async function PortalProjectPage({ params }: PortalProjectPagePro
         </TabsContent>
 
         {/* Files Tab */}
-        <TabsContent value="files" className="space-y-4">
-          {project.files.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No files yet</h3>
-                <p className="text-muted-foreground text-center">
-                  Shared files will appear here.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {project.files.map((file) => (
-                <Card key={file.id}>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-3">
-                      <FileText className="h-10 w-10 text-muted-foreground" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{file.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {(file.size / 1024).toFixed(1)} KB
-                        </p>
-                        <a
-                          href={file.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-2"
-                        >
-                          <Download className="h-3 w-3" />
-                          Download
-                        </a>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+        <TabsContent value="files">
+          <Card>
+            <CardHeader>
+              <CardTitle>Project Files</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PortalFilesList projectId={project.id} />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Approvals Tab */}
