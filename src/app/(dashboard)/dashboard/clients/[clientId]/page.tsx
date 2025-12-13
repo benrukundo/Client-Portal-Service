@@ -1,59 +1,52 @@
+import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  ArrowLeft, 
-  Plus, 
-  Mail, 
-  FolderOpen,
-  Receipt,
-  Users,
-  MoreHorizontal
-} from 'lucide-react'
-import { getInitials, formatDate } from '@/lib/utils'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { formatDate } from '@/lib/utils'
+import { getStatusColor, getStatusLabel } from '@/lib/constants'
+import { ArrowLeft, Plus, Mail, Calendar, FolderKanban, FileText, Users } from 'lucide-react'
+import { DeleteClientButton } from '@/components/dashboard/delete-client-button'
 
-interface ClientPageProps {
+export default async function ClientDetailPage({
+  params,
+}: {
   params: Promise<{ clientId: string }>
-}
-
-export default async function ClientPage({ params }: ClientPageProps) {
+}) {
   const { clientId } = await params
   const session = await auth()
 
-  const workspaceMember = await prisma.workspaceMember.findFirst({
-    where: { userId: session?.user?.id },
-  })
-
-  if (!workspaceMember) {
-    notFound()
+  if (!session?.user?.id) {
+    redirect('/login')
   }
 
   const client = await prisma.client.findFirst({
     where: {
       id: clientId,
-      workspaceId: workspaceMember.workspaceId,
+      workspace: {
+        members: { some: { userId: session.user.id } },
+      },
     },
     include: {
       contacts: {
-        include: { user: true },
+        include: { user: { select: { id: true, email: true, name: true } } },
+        orderBy: { isPrimary: 'desc' },
       },
       projects: {
+        include: {
+          _count: { select: { updates: true, files: true, approvals: true, messages: true } },
+        },
         orderBy: { createdAt: 'desc' },
       },
       invoices: {
         orderBy: { createdAt: 'desc' },
+        take: 10,
+      },
+      _count: {
+        select: { projects: true, invoices: true },
       },
     },
   })
@@ -62,131 +55,120 @@ export default async function ClientPage({ params }: ClientPageProps) {
     notFound()
   }
 
-  const primaryContact = client.contacts.find(c => c.isPrimary)?.user
+  const totalRevenue = client.invoices
+    .filter(inv => inv.status === 'paid')
+    .reduce((sum, inv) => sum + inv.total, 0)
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-700'
-      case 'completed':
-        return 'bg-blue-100 text-blue-700'
-      case 'on-hold':
-        return 'bg-yellow-100 text-yellow-700'
-      case 'cancelled':
-        return 'bg-red-100 text-red-700'
-      default:
-        return 'bg-gray-100 text-gray-700'
-    }
-  }
-
-  const getInvoiceStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return 'bg-green-100 text-green-700'
-      case 'sent':
-        return 'bg-blue-100 text-blue-700'
-      case 'overdue':
-        return 'bg-red-100 text-red-700'
-      case 'draft':
-        return 'bg-gray-100 text-gray-700'
-      default:
-        return 'bg-gray-100 text-gray-700'
-    }
-  }
+  const outstandingAmount = client.invoices
+    .filter(inv => inv.status !== 'paid' && inv.status !== 'cancelled')
+    .reduce((sum, inv) => sum + inv.total, 0)
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <Link
-            href="/dashboard/clients"
-            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Clients
-          </Link>
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
-              <AvatarFallback className="bg-primary text-primary-foreground text-xl">
-                {getInitials(client.name)}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h1 className="text-2xl font-bold">{client.name}</h1>
-              {primaryContact && (
-                <p className="text-muted-foreground flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  {primaryContact.email}
-                </p>
-              )}
+      <div>
+        <Link
+          href="/dashboard/clients"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back to Clients
+        </Link>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">{client.name}</h1>
+            {client.notes && (
+              <p className="text-muted-foreground mt-1">{client.notes}</p>
+            )}
+            <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Calendar className="h-4 w-4" />
+                Added {formatDate(client.createdAt)}
+              </span>
+              <span className="flex items-center gap-1">
+                <FolderKanban className="h-4 w-4" />
+                {client._count.projects} project{client._count.projects !== 1 ? 's' : ''}
+              </span>
+              <span className="flex items-center gap-1">
+                <FileText className="h-4 w-4" />
+                {client._count.invoices} invoice{client._count.invoices !== 1 ? 's' : ''}
+              </span>
             </div>
           </div>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon">
-              <MoreHorizontal className="h-4 w-4" />
+          <div className="flex items-center gap-2">
+            <Button variant="outline" asChild>
+              <Link href={`/dashboard/clients/${client.id}/edit`}>
+                Edit Client
+              </Link>
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>Edit Client</DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600">Delete Client</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            <DeleteClientButton
+              clientId={client.id}
+              clientName={client.name}
+              projectCount={client._count.projects}
+              invoiceCount={client._count.invoices}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Notes */}
-      {client.notes && (
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">{client.notes}</p>
+            <div className="text-2xl font-bold">{client._count.projects}</div>
+            <p className="text-sm text-muted-foreground">Total Projects</p>
           </CardContent>
         </Card>
-      )}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-2xl font-bold">
+              {client.projects.filter(p => p.status === 'active').length}
+            </div>
+            <p className="text-sm text-muted-foreground">Active Projects</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-2xl font-bold text-green-600">
+              ${(totalRevenue / 100).toLocaleString()}
+            </div>
+            <p className="text-sm text-muted-foreground">Total Revenue</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-2xl font-bold text-orange-600">
+              ${(outstandingAmount / 100).toLocaleString()}
+            </div>
+            <p className="text-sm text-muted-foreground">Outstanding</p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="projects" className="space-y-4">
+      <Tabs defaultValue="projects">
         <TabsList>
-          <TabsTrigger value="projects" className="flex items-center gap-2">
-            <FolderOpen className="h-4 w-4" />
-            Projects ({client.projects.length})
-          </TabsTrigger>
-          <TabsTrigger value="invoices" className="flex items-center gap-2">
-            <Receipt className="h-4 w-4" />
-            Invoices ({client.invoices.length})
-          </TabsTrigger>
-          <TabsTrigger value="contacts" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Contacts ({client.contacts.length})
-          </TabsTrigger>
+          <TabsTrigger value="projects">Projects ({client.projects.length})</TabsTrigger>
+          <TabsTrigger value="invoices">Invoices ({client.invoices.length})</TabsTrigger>
+          <TabsTrigger value="contacts">Contacts ({client.contacts.length})</TabsTrigger>
         </TabsList>
 
         {/* Projects Tab */}
         <TabsContent value="projects" className="space-y-4">
           <div className="flex justify-end">
-            <Link href={`/dashboard/clients/${client.id}/projects/new`}>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
+            <Button asChild>
+              <Link href={`/dashboard/clients/${client.id}/projects/new`}>
+                <Plus className="h-4 w-4 mr-2" />
                 New Project
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
-
           {client.projects.length === 0 ? (
             <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <FolderOpen className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No projects yet</h3>
-                <p className="text-muted-foreground text-center mb-4">
-                  Create your first project for this client.
-                </p>
-                <Link href={`/dashboard/clients/${client.id}/projects/new`}>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Project
-                  </Button>
-                </Link>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                <FolderKanban className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No projects yet</p>
+                <p className="text-sm">Create your first project for this client</p>
               </CardContent>
             </Card>
           ) : (
@@ -194,21 +176,25 @@ export default async function ClientPage({ params }: ClientPageProps) {
               {client.projects.map((project) => (
                 <Link key={project.id} href={`/dashboard/projects/${project.id}`}>
                   <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                    <CardContent className="flex items-center justify-between py-4">
-                      <div>
-                        <h3 className="font-medium">{project.name}</h3>
-                        {project.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-1">
-                            {project.description}
-                          </p>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Created {formatDate(project.createdAt)}
-                        </p>
+                    <CardContent className="py-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-3">
+                            <h3 className="font-medium">{project.name}</h3>
+                            <Badge className={getStatusColor(project.status)}>
+                              {getStatusLabel(project.status)}
+                            </Badge>
+                          </div>
+                          {project.description && (
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+                              {project.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {project._count.updates} updates • {project._count.files} files
+                        </div>
                       </div>
-                      <Badge className={getStatusColor(project.status)}>
-                        {project.status}
-                      </Badge>
                     </CardContent>
                   </Card>
                 </Link>
@@ -220,28 +206,19 @@ export default async function ClientPage({ params }: ClientPageProps) {
         {/* Invoices Tab */}
         <TabsContent value="invoices" className="space-y-4">
           <div className="flex justify-end">
-            <Link href={`/dashboard/invoices/new?clientId=${client.id}`}>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
+            <Button asChild>
+              <Link href={`/dashboard/invoices/new?clientId=${client.id}`}>
+                <Plus className="h-4 w-4 mr-2" />
                 New Invoice
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
-
           {client.invoices.length === 0 ? (
             <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Receipt className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No invoices yet</h3>
-                <p className="text-muted-foreground text-center mb-4">
-                  Create your first invoice for this client.
-                </p>
-                <Link href={`/dashboard/invoices/new?clientId=${client.id}`}>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Invoice
-                  </Button>
-                </Link>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No invoices yet</p>
+                <p className="text-sm">Create your first invoice for this client</p>
               </CardContent>
             </Card>
           ) : (
@@ -249,19 +226,26 @@ export default async function ClientPage({ params }: ClientPageProps) {
               {client.invoices.map((invoice) => (
                 <Link key={invoice.id} href={`/dashboard/invoices/${invoice.id}`}>
                   <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                    <CardContent className="flex items-center justify-between py-4">
-                      <div>
-                        <h3 className="font-medium">{invoice.number}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          ${(invoice.total / 100).toFixed(2)} {invoice.currency.toUpperCase()}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Created {formatDate(invoice.createdAt)}
-                        </p>
+                    <CardContent className="py-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Invoice #{invoice.id.slice(-8).toUpperCase()}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatDate(invoice.createdAt)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="font-medium">
+                            ${(invoice.total / 100).toLocaleString()}
+                          </span>
+                          <Badge
+                            variant={invoice.status === 'paid' ? 'default' : 'secondary'}
+                            className="capitalize"
+                          >
+                            {invoice.status}
+                          </Badge>
+                        </div>
                       </div>
-                      <Badge className={getInvoiceStatusColor(invoice.status)}>
-                        {invoice.status}
-                      </Badge>
                     </CardContent>
                   </Card>
                 </Link>
@@ -272,40 +256,44 @@ export default async function ClientPage({ params }: ClientPageProps) {
 
         {/* Contacts Tab */}
         <TabsContent value="contacts" className="space-y-4">
-          <div className="flex justify-end">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Contact
-            </Button>
-          </div>
-
-          <div className="space-y-3">
-            {client.contacts.map((contact) => (
-              <Card key={contact.id}>
-                <CardContent className="flex items-center justify-between py-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarFallback>
-                        {getInitials(contact.user.name || contact.user.email)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className="font-medium">
-                        {contact.user.name || 'No name'}
-                        {contact.isPrimary && (
-                          <Badge variant="outline" className="ml-2">Primary</Badge>
-                        )}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">{contact.user.email}</p>
+          {client.contacts.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No contacts yet</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {client.contacts.map((contact) => (
+                <Card key={contact.id}>
+                  <CardContent className="py-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-sm font-medium text-primary">
+                            {(contact.user.name || contact.user.email)[0].toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            {contact.user.name || 'No name'}
+                            {contact.isPrimary && (
+                              <Badge variant="outline" className="ml-2">Primary</Badge>
+                            )}
+                          </p>
+                          <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {contact.user.email}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <Button variant="ghost" size="icon">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
