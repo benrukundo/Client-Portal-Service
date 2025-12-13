@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { Workspace } from '@prisma/client'
 import { cn } from '@/lib/utils'
+import { useWorkspace } from '@/contexts/workspace-context'
 import {
   LayoutDashboard,
   Users,
@@ -29,29 +30,33 @@ const secondaryNavigation = [
   { name: 'Help', href: '/dashboard/help', icon: HelpCircle },
 ]
 
-export function DashboardSidebar({ workspace }: DashboardSidebarProps) {
+export function DashboardSidebar({ workspace: initialWorkspace }: DashboardSidebarProps) {
   const pathname = usePathname()
+  const { workspace } = useWorkspace()
+
+  // Use context workspace if available, fallback to initial
+  const currentWorkspace = workspace || initialWorkspace
 
   return (
     <aside className="w-64 border-r bg-card flex flex-col">
       {/* Logo */}
       <div className="p-6 border-b">
         <Link href="/dashboard" className="flex items-center gap-2">
-          {workspace.logo ? (
+          {currentWorkspace.logo ? (
             <img
-              src={workspace.logo}
-              alt={workspace.name}
+              src={currentWorkspace.logo}
+              alt={currentWorkspace.name}
               className="h-8 w-8 rounded"
             />
           ) : (
             <div
               className="h-8 w-8 rounded flex items-center justify-center text-white font-bold text-sm"
-              style={{ backgroundColor: workspace.brandColor }}
+              style={{ backgroundColor: currentWorkspace.brandColor }}
             >
-              {workspace.name.charAt(0).toUpperCase()}
+              {currentWorkspace.name.charAt(0).toUpperCase()}
             </div>
           )}
-          <span className="font-semibold text-lg">{workspace.name}</span>
+          <span className="font-semibold text-lg">{currentWorkspace.name}</span>
         </Link>
       </div>
 
@@ -107,14 +112,15 @@ export function DashboardSidebar({ workspace }: DashboardSidebarProps) {
         </div>
       </nav>
 
-      {/* Plan Info */}
+      {/* Footer */}
       <div className="p-4 border-t">
-        <div className="bg-muted rounded-lg p-3">
-          <p className="text-sm font-medium capitalize">{workspace.plan} Plan</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {workspace.plan === 'trial' ? 'Trial expires soon' : 'Manage subscription'}
-          </p>
-        </div>
+        <Link
+          href={`/portal/${currentWorkspace.slug}`}
+          target="_blank"
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <span>View Client Portal</span>
+        </Link>
       </div>
     </aside>
   )

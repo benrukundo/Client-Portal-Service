@@ -1,10 +1,10 @@
+import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
+import { InviteTeamDialog } from '@/components/dashboard/invite-team-dialog'
 import { getInitials, formatDate } from '@/lib/utils'
 
 export default async function TeamSettingsPage() {
@@ -52,10 +52,7 @@ export default async function TeamSettingsPage() {
             Manage who has access to this workspace
           </CardDescription>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Invite Member
-        </Button>
+        <InviteTeamDialog workspaceId={workspaceMember.workspace.id} />
       </CardHeader>
       <CardContent>
         <div className="space-y-4">

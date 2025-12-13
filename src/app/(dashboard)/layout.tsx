@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { DashboardSidebar } from '@/components/dashboard/sidebar'
 import { DashboardHeader } from '@/components/dashboard/header'
+import { WorkspaceProvider } from '@/contexts/workspace-context'
 
 export default async function DashboardLayout({
   children,
@@ -31,14 +32,16 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen flex">
-      <DashboardSidebar workspace={workspaceMember.workspace} />
-      <div className="flex-1 flex flex-col">
-        <DashboardHeader user={session.user} workspace={workspaceMember.workspace} />
-        <main className="flex-1 p-6 bg-muted/30">
-          {children}
-        </main>
+    <WorkspaceProvider initialWorkspace={workspaceMember.workspace}>
+      <div className="min-h-screen flex">
+        <DashboardSidebar workspace={workspaceMember.workspace} />
+        <div className="flex-1 flex flex-col">
+          <DashboardHeader user={session.user} workspace={workspaceMember.workspace} />
+          <main className="flex-1 p-6 bg-muted/30">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </WorkspaceProvider>
   )
 }

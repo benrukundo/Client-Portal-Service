@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+import { useWorkspace } from '@/contexts/workspace-context'
 
 type Workspace = {
   id: string
@@ -17,6 +18,7 @@ type Workspace = {
 
 export function WorkspaceSettingsForm({ workspace }: { workspace: Workspace }) {
   const [isLoading, setIsLoading] = useState(false)
+  const { setWorkspace } = useWorkspace()
   const [formData, setFormData] = useState({
     name: workspace.name,
     brandColor: workspace.brandColor || '#6366f1',
@@ -40,6 +42,11 @@ export function WorkspaceSettingsForm({ workspace }: { workspace: Workspace }) {
         const error = await response.json()
         throw new Error(error.message || 'Failed to update workspace')
       }
+
+      const updatedWorkspace = await response.json()
+
+      // Update the context so sidebar refreshes immediately
+      setWorkspace(updatedWorkspace)
 
       toast.success('Workspace settings saved!')
     } catch (error) {
