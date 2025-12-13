@@ -4,12 +4,11 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
 const updateWorkspaceSchema = z.object({
-  name: z.string().min(2).max(100).optional(),
-  slug: z.string().min(2).max(100).optional(),
-  brandColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-  website: z.string().url().optional().or(z.literal('')),
-  address: z.string().max(200).optional(),
-  phone: z.string().max(50).optional(),
+  name: z.string().min(1).optional(),
+  brandColor: z.string().optional(),
+  website: z.string().optional(),
+  address: z.string().optional(),
+  phone: z.string().optional(),
 })
 
 export async function PATCH(
@@ -46,28 +45,10 @@ export async function PATCH(
     const body = await request.json()
     const validatedData = updateWorkspaceSchema.parse(body)
 
-    // Check if slug is taken by another workspace
-    if (validatedData.slug) {
-      const existingWorkspace = await prisma.workspace.findFirst({
-        where: {
-          slug: validatedData.slug,
-          id: { not: workspaceId },
-        },
-      })
-
-      if (existingWorkspace) {
-        return NextResponse.json(
-          { message: 'This portal URL is already taken' },
-          { status: 400 }
-        )
-      }
-    }
-
     const workspace = await prisma.workspace.update({
       where: { id: workspaceId },
       data: {
         ...(validatedData.name && { name: validatedData.name }),
-        ...(validatedData.slug && { slug: validatedData.slug }),
         ...(validatedData.brandColor && { brandColor: validatedData.brandColor }),
         ...(validatedData.website !== undefined && { website: validatedData.website || null }),
         ...(validatedData.address !== undefined && { address: validatedData.address || null }),
