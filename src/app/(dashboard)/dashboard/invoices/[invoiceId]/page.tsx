@@ -5,15 +5,10 @@ import { prisma } from '@/lib/prisma'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Send, MoreHorizontal } from 'lucide-react'
+import { ArrowLeft, Edit, FileText } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { SendInvoiceButton } from '@/components/dashboard/send-invoice-button'
+import { DeleteInvoiceButton } from '@/components/dashboard/delete-invoice-button'
 
 interface InvoicePageProps {
   params: Promise<{ invoiceId: string }>
@@ -94,21 +89,25 @@ export default async function InvoicePage({ params }: InvoicePageProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <a href={`/api/invoices/${invoice.id}/pdf`} target="_blank" rel="noopener noreferrer">
+              <FileText className="h-4 w-4 mr-2" />
+              View PDF
+            </a>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/dashboard/invoices/${invoice.id}/edit`}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Link>
+          </Button>
+          <DeleteInvoiceButton
+            invoiceId={invoice.id}
+            clientName={invoice.client.name}
+          />
           {invoice.status === 'draft' && (
             <SendInvoiceButton invoiceId={invoice.id} />
           )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>Download PDF</DropdownMenuItem>
-              <DropdownMenuItem>Edit Invoice</DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600">Cancel Invoice</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 
