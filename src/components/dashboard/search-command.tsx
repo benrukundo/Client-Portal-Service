@@ -2,27 +2,20 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from '@/components/ui/command'
-import {
-  Users,
-  FolderKanban,
-  FileText,
-  File,
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import { Input } from '@/components/ui/input'
+import { 
+  Users, 
+  FolderKanban, 
+  FileText, 
+  File, 
   Search,
   ArrowRight,
   Loader2
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { getStatusColor, getStatusLabel } from '@/lib/constants'
-import { useDebounce } from '@/hooks/use-debounce'
 
 type SearchResult = {
   id: string
@@ -50,8 +43,6 @@ export function SearchCommand() {
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<SearchResults | null>(null)
 
-  const debouncedQuery = useDebounce(query, 300)
-
   // Keyboard shortcut to open search
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -67,15 +58,16 @@ export function SearchCommand() {
 
   // Search when query changes
   useEffect(() => {
-    async function search() {
-      if (!debouncedQuery || debouncedQuery.length < 2) {
+    const searchTimeout = setTimeout(async () => {
+      if (!query || query.length < 2) {
         setResults(null)
+        setLoading(false)
         return
       }
 
       setLoading(true)
       try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`)
+        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
         if (response.ok) {
           const data = await response.json()
           setResults(data)
@@ -85,17 +77,26 @@ export function SearchCommand() {
       } finally {
         setLoading(false)
       }
+    }, 300)
+
+    return () => clearTimeout(searchTimeout)
+  }, [query])
+
+  // Reset when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setQuery('')
+      setResults(null)
     }
+  }, [open])
 
-    search()
-  }, [debouncedQuery])
-
-  const handleSelect = useCallback((url: string) => {
+  const handleSelect = (url: string) => {
+    console.log('Navigating to:', url)
     setOpen(false)
-    setQuery('')
-    setResults(null)
-    router.push(url)
-  }, [router])
+    setTimeout(() => {
+      router.push(url)
+    }, 100)
+  }
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -112,6 +113,8 @@ export function SearchCommand() {
     }
   }
 
+  const hasResults = results && results.total > 0
+
   return (
     <>
       <button
@@ -125,75 +128,79 @@ export function SearchCommand() {
         </kbd>
       </button>
 
-      <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput
-          placeholder="Search clients, projects, files, invoices..."
-          value={query}
-          onValueChange={setQuery}
-        />
-        <CommandList>
-          {loading && (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          )}
-
-          {!loading && !results && query.length < 2 && (
-            <CommandEmpty>
-              <div className="text-center py-6">
-                <Search className="h-8 w-8 mx-auto mb-2 text-muted-foreground opacity-50" />
-                <p className="text-sm text-muted-foreground">
-                  Type at least 2 characters to search
-                </p>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="p-0 gap-0 max-w-2xl">
+          <VisuallyHidden>
+            <DialogTitle>Search</DialogTitle>
+          </VisuallyHidden>
+          
+          <div className="flex items-center border-b px-3">
+            <Search className="h-4 w-4 text-muted-foreground mr-2" />
+            <Input
+              placeholder="Search clients, projects, files, invoices..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0 h-12"
+              autoFocus
+            />
+          </div>
+          
+          <div className="max-h-[400px] overflow-y-auto p-2">
+            {loading && (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            </CommandEmpty>
-          )}
+            )}
 
-          {!loading && results && results.total === 0 && (
-            <CommandEmpty>
-              <div className="text-center py-6">
-                <p className="text-sm text-muted-foreground">
-                  No results found for "{query}"
-                </p>
+            {!loading && query.length < 2 && (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                Type at least 2 characters to search
               </div>
-            </CommandEmpty>
-          )}
+            )}
 
-          {!loading && results && results.total > 0 && (
-            <>
-              {results.clients.length > 0 && (
-                <CommandGroup heading="Clients">
-                  {results.clients.map((result) => (
-                    <CommandItem
-                      key={result.id}
-                      value={`client-${result.id}`}
-                      onSelect={() => handleSelect(result.url)}
-                      className="flex items-center gap-3 py-3"
-                    >
-                      {getTypeIcon(result.type)}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{result.title}</p>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {result.subtitle}
-                        </p>
+            {!loading && query.length >= 2 && !hasResults && (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                No results found for "{query}"
+              </div>
+            )}
+
+            {!loading && hasResults && (
+              <div className="space-y-4">
+                {results.clients.length > 0 && (
+                  <div>
+                    <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                      Clients
+                    </div>
+                    {results.clients.map((result) => (
+                      <div
+                        key={`client-${result.id}`}
+                        onClick={() => handleSelect(result.url)}
+                        className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-gray-100 transition-colors text-left cursor-pointer"
+                      >
+                        {getTypeIcon(result.type)}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{result.title}</p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {result.subtitle}
+                          </p>
+                        </div>
+                        <span className="text-xs text-muted-foreground">{result.meta}</span>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
                       </div>
-                      <span className="text-xs text-muted-foreground">{result.meta}</span>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
+                    ))}
+                  </div>
+                )}
 
-              {results.projects.length > 0 && (
-                <>
-                  <CommandSeparator />
-                  <CommandGroup heading="Projects">
+                {results.projects.length > 0 && (
+                  <div>
+                    <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                      Projects
+                    </div>
                     {results.projects.map((result) => (
-                      <CommandItem
-                        key={result.id}
-                        value={`project-${result.id}`}
-                        onSelect={() => handleSelect(result.url)}
-                        className="flex items-center gap-3 py-3"
+                      <div
+                        key={`project-${result.id}`}
+                        onClick={() => handleSelect(result.url)}
+                        className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-gray-100 transition-colors text-left cursor-pointer"
                       >
                         {getTypeIcon(result.type)}
                         <div className="flex-1 min-w-0">
@@ -206,22 +213,21 @@ export function SearchCommand() {
                           {getStatusLabel(result.meta)}
                         </Badge>
                         <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                      </CommandItem>
+                      </div>
                     ))}
-                  </CommandGroup>
-                </>
-              )}
+                  </div>
+                )}
 
-              {results.files.length > 0 && (
-                <>
-                  <CommandSeparator />
-                  <CommandGroup heading="Files">
+                {results.files.length > 0 && (
+                  <div>
+                    <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                      Files
+                    </div>
                     {results.files.map((result) => (
-                      <CommandItem
-                        key={result.id}
-                        value={`file-${result.id}`}
-                        onSelect={() => handleSelect(result.url)}
-                        className="flex items-center gap-3 py-3"
+                      <div
+                        key={`file-${result.id}`}
+                        onClick={() => handleSelect(result.url)}
+                        className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-gray-100 transition-colors text-left cursor-pointer"
                       >
                         {getTypeIcon(result.type)}
                         <div className="flex-1 min-w-0">
@@ -232,22 +238,21 @@ export function SearchCommand() {
                         </div>
                         <span className="text-xs text-muted-foreground">{result.meta}</span>
                         <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                      </CommandItem>
+                      </div>
                     ))}
-                  </CommandGroup>
-                </>
-              )}
+                  </div>
+                )}
 
-              {results.invoices.length > 0 && (
-                <>
-                  <CommandSeparator />
-                  <CommandGroup heading="Invoices">
+                {results.invoices.length > 0 && (
+                  <div>
+                    <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                      Invoices
+                    </div>
                     {results.invoices.map((result) => (
-                      <CommandItem
-                        key={result.id}
-                        value={`invoice-${result.id}`}
-                        onSelect={() => handleSelect(result.url)}
-                        className="flex items-center gap-3 py-3"
+                      <div
+                        key={`invoice-${result.id}`}
+                        onClick={() => handleSelect(result.url)}
+                        className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-gray-100 transition-colors text-left cursor-pointer"
                       >
                         {getTypeIcon(result.type)}
                         <div className="flex-1 min-w-0">
@@ -261,15 +266,20 @@ export function SearchCommand() {
                           {result.meta}
                         </Badge>
                         <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                      </CommandItem>
+                      </div>
                     ))}
-                  </CommandGroup>
-                </>
-              )}
-            </>
-          )}
-        </CommandList>
-      </CommandDialog>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="border-t p-2 text-xs text-muted-foreground flex items-center justify-between">
+            <span>Press ESC to close</span>
+            <span>{hasResults ? `${results.total} result${results.total !== 1 ? 's' : ''}` : ''}</span>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
